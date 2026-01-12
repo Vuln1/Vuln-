@@ -1,0 +1,95 @@
+import requests
+import os
+from multiprocessing.dummy import Pool
+from colorama import Fore, Style, init
+
+# تهيئة الألوان لويندوز
+init(autoreset=True)
+
+fg = Fore.GREEN
+fr = Fore.RED
+fc = Fore.CYAN
+fw = Fore.WHITE
+sb = Style.BRIGHT
+
+THREADS = 25
+FILE_NAME = "common.txt"
+REPORT = "report.txt"
+
+# ---------------------- BANNER --------------------------
+def banner():
+    print(f"""{fc}{sb}
+===========================================
+      WordPress Advanced Scanner
+        Fast • Safe • Clean
+         Powered by YHIA
+===========================================
+""")
+
+banner()
+
+# ------------------- READ PATHS -------------------------
+if not os.path.exists(FILE_NAME):
+    print(f"{fr}[ERROR] File {FILE_NAME} not found! Put it next to the script.")
+    input("Press Enter to exit...")
+    exit()
+
+with open(FILE_NAME, "r", encoding="utf-8", errors="ignore") as f:
+    paths = [line.strip() for line in f if line.strip()]
+
+print(f"{fc}[+] Loaded {len(paths)} paths from {FILE_NAME}\n")
+
+with open(REPORT, "w", encoding="utf-8") as r:
+    r.write("=== Scan Report ===\n")
+
+# ------------------- CHECK FUNCTION ---------------------
+def scan_path(p):
+    if not p.startswith("/"):
+        p = "/" + p
+
+    full = TARGET + p
+
+    try:
+        r = requests.get(full, timeout=6)
+        code = r.status_code
+
+        if code in [200, 201]:
+            msg = f"[OPEN] {full}"
+            print(f"{fr}{msg}")
+
+        elif code == 403:
+            msg = f"[FORBIDDEN] {full}"
+            print(f"{fg}{msg}")
+
+        elif code == 404:
+            msg = f"[NOT FOUND] {full}"
+            print(f"{fg}{msg}")
+
+        else:
+            msg = f"[{code}] {full}"
+            print(f"{fc}{msg}")
+
+    except Exception:
+        msg = f"[ERROR] {full}"
+        print(f"{fr}{msg}")
+
+    with open(REPORT, "a", encoding="utf-8") as r:
+        r.write(msg + "\n")
+
+# ----------------------- MAIN ---------------------------
+if __name__ == "__main__":
+    TARGET = input("Enter target URL (example: https://example.com): ").strip()
+
+    if TARGET.endswith("/"):
+        TARGET = TARGET[:-1]
+
+    print(f"\n{fc}[+] Scanning using {THREADS} threads...\n")
+
+    pool = Pool(THREADS)
+    pool.map(scan_path, paths)
+    pool.close()
+    pool.join()
+
+    print(f"\n{fg}[DONE] Scan finished!")
+    print(f"{fg}[REPORT] Saved to {REPORT}\n")
+    input("Press Enter to exit...")
